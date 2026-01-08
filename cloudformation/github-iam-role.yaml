@@ -42,7 +42,7 @@ Parameters:
   ProjectName:
     Type: String
     Description: Name of the GitHub repository (change this when copying to another repo)
-    Default: terraform-core-oidc
+    Default: simple-saml-idp
     MinLength: 1
     MaxLength: 100
     AllowedPattern: ^[a-zA-Z0-9._-]+$
@@ -128,7 +128,9 @@ Resources:
                   - lambda:UpdateFunctionCode
                   - lambda:UpdateFunctionConfiguration
                   - lambda:ListVersionsByFunction
-                  - lambda:PublishVersion
+                  - lambda:PublishLayerVersion
+                  - lambda:DeleteLayerVersion
+                  - lambda:GetLayerVersion
                   - lambda:TagResource
                   - lambda:UntagResource
                   - lambda:ListTags
@@ -136,7 +138,9 @@ Resources:
                   - lambda:RemovePermission
                   - lambda:GetPolicy
                 Resource:
-                  - !Sub 'arn:aws:lambda:*:${AWS::AccountId}:function:oidc-provider-${Environment}-*'
+                  - !Sub 'arn:aws:lambda:*:${AWS::AccountId}:function:simple-saml-idp-*-${Environment}'
+                  - !Sub 'arn:aws:lambda:*:${AWS::AccountId}:layer:simple-saml-idp-*-${Environment}'
+                  - !Sub 'arn:aws:lambda:*:${AWS::AccountId}:layer:simple-saml-idp-*-${Environment}:*'
               
               # API Gateway permissions
               - Sid: APIGatewayManagement
@@ -147,20 +151,12 @@ Resources:
                   - apigateway:PUT
                   - apigateway:PATCH
                   - apigateway:DELETE
+                  - apigateway:TagResource
+                  - apigateway:UntagResource
                 Resource:
-                  - !Sub 'arn:aws:apigateway:*::/restapis'
-                  - !Sub 'arn:aws:apigateway:*::/restapis/*'
+                  - !Sub 'arn:aws:apigateway:*::/apis'
+                  - !Sub 'arn:aws:apigateway:*::/apis/*'
                   - !Sub 'arn:aws:apigateway:*::/tags/*'
-              
-              # API Gateway account settings (required for CloudWatch Logs integration)
-              - Sid: APIGatewayAccountSettings
-                Effect: Allow
-                Action:
-                  - apigateway:UpdateAccount
-                  - apigateway:PATCH
-                  - apigateway:GET
-                Resource:
-                  - !Sub 'arn:aws:apigateway:*::/account'
               
               # DynamoDB permissions
               - Sid: DynamoDBManagement
@@ -178,7 +174,7 @@ Resources:
                   - dynamodb:UpdateContinuousBackups
                   - dynamodb:UpdateTimeToLive
                 Resource:
-                  - !Sub 'arn:aws:dynamodb:*:${AWS::AccountId}:table/oidc-provider-${Environment}-*'
+                  - !Sub 'arn:aws:dynamodb:*:${AWS::AccountId}:table/simple-saml-idp-*-${Environment}'
               
               # SSM Parameter Store permissions
               - Sid: SSMParameterManagement
@@ -193,7 +189,7 @@ Resources:
                   - ssm:RemoveTagsFromResource
                   - ssm:ListTagsForResource
                 Resource:
-                  - !Sub 'arn:aws:ssm:*:${AWS::AccountId}:parameter/oidc-provider/${Environment}/*'
+                  - !Sub 'arn:aws:ssm:*:${AWS::AccountId}:parameter/simple-saml-idp/${Environment}/*'
               
               # S3 permissions
               - Sid: S3BucketManagement
@@ -236,9 +232,26 @@ Resources:
                   - s3:GetObjectAcl
                   - s3:PutLifecycleConfiguration
                 Resource:
-                  - !Sub 'arn:aws:s3:::oidc-provider-${Environment}-*'
+                  - !Sub 'arn:aws:s3:::simple-saml-idp-login-${Environment}-*'
+                  - !Sub 'arn:aws:s3:::simple-saml-idp-login-${Environment}-*/*'
 
-              # IAM permissions for Lambda execution role and API Gateway CloudWatch role
+              # CloudFront permissions (conditional - only needed if enable_cloudfront = true)
+              - Sid: CloudFrontManagement
+                Effect: Allow
+                Action:
+                  - cloudfront:CreateDistribution
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetDistributionConfig
+                  - cloudfront:UpdateDistribution
+                  - cloudfront:DeleteDistribution
+                  - cloudfront:TagResource
+                  - cloudfront:ListTagsForResource
+                  - cloudfront:CreateCloudFrontOriginAccessIdentity
+                  - cloudfront:GetCloudFrontOriginAccessIdentity
+                  - cloudfront:DeleteCloudFrontOriginAccessIdentity
+                Resource: '*'
+
+              # IAM permissions for Lambda execution role
               - Sid: IAMRoleManagement
                 Effect: Allow
                 Action:
@@ -258,8 +271,7 @@ Resources:
                   - iam:ListInstanceProfilesForRole
                   - iam:PassRole
                 Resource:
-                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/oidc-provider-${Environment}-lambda-exec'
-                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/oidc-provider-${Environment}-api-gateway-cloudwatch'
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/simple-saml-idp-lambda-${Environment}'
               
               # IAM permissions for managed policies (read-only)
               - Sid: IAMPolicyReadAccess
@@ -271,8 +283,7 @@ Resources:
                 Resource:
                   - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
               
-              # CloudWatch Logs permissions (for Lambda)
-              # Note: Scoped to Lambda log groups for management operations (create, delete, configure)
+              # CloudWatch Logs permissions (for Lambda and API Gateway)
               - Sid: CloudWatchLogsManagement
                 Effect: Allow
                 Action:
@@ -285,20 +296,10 @@ Resources:
                   - logs:PutRetentionPolicy
                   - logs:DeleteRetentionPolicy
                 Resource:
-                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/oidc-provider-${Environment}-*'
-                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/oidc-provider-${Environment}-*:*'
-              
-              # Additional CloudWatch Logs permissions for API Gateway
-              # Separate statement with wildcard resource because API Gateway may create log groups
-              # with different naming patterns than Lambda. logs:CreateLogGroup is intentionally
-              # duplicated here to support both scoped Lambda operations and wildcard API Gateway needs.
-              - Sid: CloudWatchLogsAPIGateway
-                Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:DescribeLogGroups
-                Resource:
-                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:*'
+                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/simple-saml-idp-*-${Environment}'
+                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/simple-saml-idp-*-${Environment}:*'
+                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/apigateway/simple-saml-idp-${Environment}'
+                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/apigateway/simple-saml-idp-${Environment}:*'
               
               # Terraform state and resource discovery
               # Wildcard resource access is required for list/discovery operations that Terraform
@@ -314,6 +315,8 @@ Resources:
                   - ssm:DescribeParameters
                   - s3:ListAllMyBuckets
                   - iam:ListRoles
+                  - cloudfront:ListDistributions
+                  - cloudfront:ListCloudFrontOriginAccessIdentities
                 Resource: '*'
       Tags:
         - Key: Project
