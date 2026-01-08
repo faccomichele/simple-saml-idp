@@ -2,6 +2,27 @@
 
 This document provides the minimum IAM permissions required to deploy the Simple SAML IdP infrastructure using Terraform.
 
+## Using the CloudFormation Template (Recommended)
+
+For GitHub Actions deployments, use the CloudFormation template at `cloudformation/github-iam-role.yaml`. This template:
+- Creates a GitHub Actions IAM role with OIDC authentication
+- Includes all necessary permissions scoped to the correct resource names
+- Supports both `terraform apply` and `terraform destroy` operations
+- Uses the naming pattern: `simple-saml-idp-*-{environment}` for all resources
+
+The CloudFormation template provides a production-ready IAM configuration with:
+- Lambda function and layer management
+- API Gateway v2 (HTTP API) support
+- CloudFront distribution management (conditional)
+- DynamoDB table operations
+- S3 bucket management
+- SSM Parameter Store access
+- CloudWatch Logs management
+
+## Manual Deployment Policy
+
+If you prefer to create IAM policies manually instead of using CloudFormation, use the following policy.
+
 ## Deployment User Policy
 
 Create an IAM user or role with the following policy for deploying the infrastructure:
@@ -297,6 +318,46 @@ In each target AWS account where users will SSO, an administrator needs permissi
 4. **Account Specific**: Replace account IDs (`*`) with specific account IDs for better security.
 
 5. **CloudFront Global**: CloudFront is a global service and requires `"Resource": "*"` for some operations.
+
+## CloudFormation Template Details
+
+The `cloudformation/github-iam-role.yaml` template creates IAM policies that match the exact resource naming patterns used by the Terraform configuration:
+
+### Resource Naming Patterns
+
+| Resource Type | Pattern | Example |
+|--------------|---------|---------|
+| Lambda Function | `simple-saml-idp-processor-{env}` | `simple-saml-idp-processor-dev` |
+| Lambda Layer | `simple-saml-idp-dependencies-{env}` | `simple-saml-idp-dependencies-dev` |
+| DynamoDB Tables | `simple-saml-idp-{table}-{env}` | `simple-saml-idp-users-dev` |
+| S3 Bucket | `simple-saml-idp-login-{env}-{account_id}` | `simple-saml-idp-login-dev-123456789012` |
+| IAM Role | `simple-saml-idp-lambda-{env}` | `simple-saml-idp-lambda-dev` |
+| SSM Parameters | `/simple-saml-idp/{env}/*` | `/simple-saml-idp/dev/saml/certificate` |
+| CloudWatch Logs | `/aws/lambda/simple-saml-idp-processor-{env}` | `/aws/lambda/simple-saml-idp-processor-dev` |
+| API Gateway | `simple-saml-idp-api-{env}` | `simple-saml-idp-api-dev` |
+
+### Key Features
+
+1. **API Gateway v2 Support**: The template uses HTTP API v2 endpoints (`/apis`) instead of REST API (`/restapis`)
+2. **Lambda Layers**: Includes permissions for Lambda layer management (PublishLayerVersion, DeleteLayerVersion)
+3. **CloudFront**: Full support for CloudFront distributions and Origin Access Identities
+4. **Scoped Permissions**: All resources are scoped to the project name and environment
+5. **Tag Management**: Includes permissions for managing tags on all supported resources
+
+### Usage
+
+Deploy the CloudFormation stack with:
+
+```bash
+aws cloudformation create-stack \
+  --stack-name github-role-simple-saml-idp-dev \
+  --template-body file://cloudformation/github-iam-role.yaml \
+  --parameters \
+    ParameterKey=Environment,ParameterValue=dev \
+    ParameterKey=ProjectName,ParameterValue=simple-saml-idp \
+    ParameterKey=TerraformAccessPolicyAccountID,ParameterValue=YOUR_ACCOUNT_ID \
+  --capabilities CAPABILITY_IAM
+```
 
 ## Creating the IAM User
 
