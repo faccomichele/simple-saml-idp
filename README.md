@@ -2,6 +2,12 @@
 
 A serverless SAML Identity Provider (IdP) built with Terraform and AWS services, designed specifically for AWS Console Single Sign-On (SSO). This solution enables users to authenticate and access multiple AWS accounts with different IAM roles through a simple web interface.
 
+## 🚀 Quick Start
+
+**Want to get started immediately?** See [QUICKSTART.md](QUICKSTART.md) for a 15-minute setup guide.
+
+For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Features
 
 - **Serverless Architecture**: Built entirely on AWS serverless services (Lambda, API Gateway, DynamoDB, S3)
@@ -56,8 +62,18 @@ A serverless SAML Identity Provider (IdP) built with Terraform and AWS services,
 - AWS CLI configured with appropriate credentials
 - Python 3.x (for building Lambda layer)
 - OpenSSL (for generating SAML certificates)
+- Make (optional, for using Makefile commands)
 
-## Quick Start
+## Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)**: Get up and running in 15 minutes
+- **[DEPLOYMENT.md](DEPLOYMENT.md)**: Detailed deployment guide with step-by-step instructions
+- **[AUTHENTICATION_FLOW.md](AUTHENTICATION_FLOW.md)**: Understand how the SAML authentication works
+- **[IAM_POLICY.md](IAM_POLICY.md)**: Required IAM permissions for deployment and operations
+
+## Quick Start (Summary)
+
+For detailed instructions, see [QUICKSTART.md](QUICKSTART.md).
 
 ### 1. Clone the Repository
 
