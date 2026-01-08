@@ -1,0 +1,9 @@
+{
+  "username": "john.doe",
+  "email": "john.doe@example.com",
+  "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+  "first_name": "John",
+  "last_name": "Doe",
+  "enabled": true,
+  "created_at": "2024-01-08T00:00:00Z"
+}
