@@ -24,6 +24,7 @@ IDP_BASE_URL = os.environ['IDP_BASE_URL']
 SESSION_DURATION = int(os.environ['SESSION_DURATION'])
 SSM_PARAMETER_PREFIX = os.environ['SSM_PARAMETER_PREFIX']
 ALLOWED_AWS_ACCOUNTS = json.loads(os.environ.get('ALLOWED_AWS_ACCOUNTS', '[]'))
+SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
 
 # Cache for SSM parameters
 _ssm_cache = {}
@@ -100,7 +101,7 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
     assertion_id = f"_{''.join(f'{b:02x}' for b in os.urandom(20))}"
     
     # Build principal ARN (for the SAML provider in the target account)
-    principal_arn = f"arn:aws:iam::{account_id}:saml-provider/SimpleSAMLIdP"
+    principal_arn = f"arn:aws:iam::{account_id}:saml-provider/{SAML_PROVIDER_NAME}"
     
     # Format timestamps
     issue_instant = now.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -177,7 +178,10 @@ def authenticate_user(username, password):
         user = response['Item']
         
         # Simple password hash comparison (SHA256)
-        # In production, use bcrypt or similar
+        # WARNING: SHA256 is NOT SECURE for password hashing in production!
+        # It's fast and vulnerable to rainbow table attacks.
+        # For production use, implement bcrypt, Argon2, or scrypt with proper salt.
+        # This is provided as a simple example for demonstration purposes only.
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         if user.get('password_hash') == password_hash:

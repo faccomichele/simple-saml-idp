@@ -14,6 +14,9 @@ USERNAME=$2
 PASSWORD=$3
 
 # Generate password hash (SHA256)
+# WARNING: SHA256 is NOT SECURE for password hashing in production!
+# For production use, implement bcrypt, Argon2, or scrypt with proper salt.
+# This is provided as a simple example for demonstration purposes only.
 PASSWORD_HASH=$(echo -n "$PASSWORD" | sha256sum | awk '{print $1}')
 
 # Create user item

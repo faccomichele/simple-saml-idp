@@ -293,6 +293,7 @@ resource "aws_lambda_function" "saml_processor" {
       SESSION_DURATION      = var.session_duration_seconds
       SSM_PARAMETER_PREFIX  = "/${var.project_name}/${var.environment}"
       ALLOWED_AWS_ACCOUNTS  = jsonencode(var.allowed_aws_accounts)
+      SAML_PROVIDER_NAME    = var.saml_provider_name
     }
   }
 
@@ -318,7 +319,7 @@ resource "aws_apigatewayv2_api" "saml" {
   description   = "SAML IdP API for AWS Console SSO"
 
   cors_configuration {
-    allow_origins = ["*"]
+    allow_origins = var.allowed_cors_origins
     allow_methods = ["GET", "POST", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
     max_age       = 300
@@ -408,9 +409,11 @@ resource "aws_lambda_permission" "api_gateway" {
 }
 
 # SSM Parameters for SAML Configuration
+# These are created with placeholder values and must be updated manually after deployment
+# The lifecycle ignore_changes prevents Terraform from overwriting the actual values
 resource "aws_ssm_parameter" "saml_private_key" {
   name        = "/${var.project_name}/${var.environment}/saml/private_key"
-  description = "SAML signing private key (RSA)"
+  description = "SAML signing private key (RSA) - MUST be replaced with actual key after deployment"
   type        = "SecureString"
   value       = "PLACEHOLDER_REPLACE_WITH_ACTUAL_KEY"
 
@@ -425,7 +428,7 @@ resource "aws_ssm_parameter" "saml_private_key" {
 
 resource "aws_ssm_parameter" "saml_certificate" {
   name        = "/${var.project_name}/${var.environment}/saml/certificate"
-  description = "SAML signing certificate (X.509)"
+  description = "SAML signing certificate (X.509) - MUST be replaced with actual cert after deployment"
   type        = "String"
   value       = "PLACEHOLDER_REPLACE_WITH_ACTUAL_CERT"
 

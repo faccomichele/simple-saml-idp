@@ -43,3 +43,15 @@ variable "enable_cloudfront" {
   type        = bool
   default     = true
 }
+
+variable "saml_provider_name" {
+  description = "Name of the SAML provider in target AWS accounts"
+  type        = string
+  default     = "SimpleSAMLIdP"
+}
+
+variable "allowed_cors_origins" {
+  description = "List of allowed CORS origins for API Gateway. Use ['*'] to allow all origins (not recommended for production)"
+  type        = list(string)
+  default     = ["*"]
+}

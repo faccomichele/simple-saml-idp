@@ -22,3 +22,11 @@ allowed_aws_accounts = [
 
 # Enable CloudFront for serving login page
 enable_cloudfront = true
+
+# SAML provider name in target AWS accounts (must match the provider name)
+saml_provider_name = "SimpleSAMLIdP"
+
+# CORS origins allowed to call the API
+# For production, restrict to your login page domain
+# Example: ["https://login.example.com", "https://idp.example.com"]
+allowed_cors_origins = ["*"]  # Warning: Allowing all origins is not recommended for production
