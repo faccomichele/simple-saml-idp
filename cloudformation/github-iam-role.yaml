@@ -67,27 +67,6 @@ Parameters:
     Description: The account ID for Terraform access managed policy (from terraform-core-aws stack)
 
 Resources:
-  # IAM role for API Gateway to push logs to CloudWatch
-  APIGatewayCloudWatchLogsRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: apigateway.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
-      Tags:
-        - Key: Project
-          Value: !Ref ProjectName
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Purpose
-          Value: API Gateway CloudWatch Logs Integration
-
   # IAM role for GitHub Actions (repository-specific)
   GitHubActionsRole:
     Type: AWS::IAM::Role
@@ -338,13 +317,7 @@ Resources:
         - Key: Region
           Value: !Ref 'AWS::Region'
 
-Outputs:
-  APIGatewayCloudWatchLogsRoleArn:
-    Description: ARN of the IAM role for API Gateway CloudWatch Logs integration
-    Value: !GetAtt APIGatewayCloudWatchLogsRole.Arn
-    Export:
-      Name: !Sub '${AWS::StackName}-APIGatewayCloudWatchLogsRoleArn'
-  
+Outputs:  
   GitHubActionsRoleArn:
     Description: ARN of the IAM role for GitHub Actions
     Value: !GetAtt GitHubActionsRole.Arn

@@ -14,13 +14,13 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = local.aws_region
 
   default_tags {
     tags = {
-      Project     = "simple-saml-idp"
+      Project     = local.project_name
+      Environment = local.environment
       ManagedBy   = "Terraform"
-      Environment = var.environment
     }
   }
 }
