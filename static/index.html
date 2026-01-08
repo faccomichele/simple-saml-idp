@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Console SSO - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .role-selection {
+            display: none;
+        }
+
+        .role-selection.show {
+            display: block;
+        }
+
+        .role-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .role-item {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .role-item:hover {
+            border-color: #667eea;
+            background: #f3f4f6;
+            transform: translateX(4px);
+        }
+
+        .role-item.selected {
+            border-color: #667eea;
+            background: #eef2ff;
+        }
+
+        .role-account {
+            font-weight: 600;
+            color: #374151;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .role-name {
+            color: #667eea;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 4px;
+        }
+
+        .role-description {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>AWS Console SSO</h1>
+            <p>Simple SAML Identity Provider</p>
+        </div>
+
+        <div id="error" class="error"></div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn" id="loginBtn">Sign In</button>
+            <div class="loading" id="loginLoading">
+                <span class="spinner"></span>Authenticating...
+            </div>
+        </form>
+
+        <!-- Role Selection -->
+        <div id="roleSelection" class="role-selection">
+            <h2 style="color: #374151; font-size: 20px; margin-bottom: 10px;">Select AWS Role</h2>
+            <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+                Choose the AWS account and role you want to access:
+            </p>
+            <div id="roleList" class="role-list"></div>
+            <button type="button" class="btn" id="continueBtn" disabled>Continue to AWS Console</button>
+            <div class="loading" id="ssoLoading">
+                <span class="spinner"></span>Redirecting to AWS Console...
+            </div>
+            <div class="back-link">
+                <a href="#" id="backLink">← Back to login</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Update these values after deployment
+        const API_BASE_URL = 'YOUR_API_GATEWAY_URL'; // Replace with actual API Gateway URL
+        
+        let currentUsername = '';
+        let selectedRole = null;
+
+        // DOM elements
+        const loginForm = document.getElementById('loginForm');
+        const roleSelection = document.getElementById('roleSelection');
+        const errorDiv = document.getElementById('error');
+        const roleList = document.getElementById('roleList');
+        const continueBtn = document.getElementById('continueBtn');
+        const backLink = document.getElementById('backLink');
+        const loginLoading = document.getElementById('loginLoading');
+        const ssoLoading = document.getElementById('ssoLoading');
+
+        // Show error message
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        // Handle login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.disabled = true;
+            loginLoading.classList.add('show');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.roles && data.roles.length > 0) {
+                    currentUsername = data.username;
+                    showRoleSelection(data.roles);
+                } else {
+                    showError(data.error || 'Authentication failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Connection error. Please check the API_BASE_URL configuration.');
+            } finally {
+                loginBtn.disabled = false;
+                loginLoading.classList.remove('show');
+            }
+        });
+
+        // Show role selection screen
+        function showRoleSelection(roles) {
+            roleList.innerHTML = '';
+            
+            roles.forEach(role => {
+                const roleItem = document.createElement('div');
+                roleItem.className = 'role-item';
+                roleItem.innerHTML = `
+                    <div class="role-account">${role.account_name || 'AWS Account'} (${role.account_id})</div>
+                    <div class="role-name">${role.role_name}</div>
+                    ${role.description ? `<div class="role-description">${role.description}</div>` : ''}
+                `;
+                
+                roleItem.addEventListener('click', () => {
+                    document.querySelectorAll('.role-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    roleItem.classList.add('selected');
+                    selectedRole = role;
+                    continueBtn.disabled = false;
+                });
+                
+                roleList.appendChild(roleItem);
+            });
+
+            loginForm.style.display = 'none';
+            roleSelection.classList.add('show');
+        }
+
+        // Handle continue to AWS Console
+        continueBtn.addEventListener('click', async () => {
+            if (!selectedRole) return;
+
+            continueBtn.disabled = true;
+            ssoLoading.classList.add('show');
+
+            try {
+                // Create a form and submit to SSO endpoint
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `${API_BASE_URL}/sso`;
+
+                const usernameInput = document.createElement('input');
+                usernameInput.type = 'hidden';
+                usernameInput.name = 'username';
+                usernameInput.value = currentUsername;
+                form.appendChild(usernameInput);
+
+                const roleInput = document.createElement('input');
+                roleInput.type = 'hidden';
+                roleInput.name = 'role_arn';
+                roleInput.value = selectedRole.role_arn;
+                form.appendChild(roleInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            } catch (error) {
+                console.error('SSO error:', error);
+                showError('Failed to redirect to AWS Console');
+                continueBtn.disabled = false;
+                ssoLoading.classList.remove('show');
+            }
+        });
+
+        // Handle back to login
+        backLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            roleSelection.classList.remove('show');
+            loginForm.style.display = 'block';
+            document.getElementById('password').value = '';
+            selectedRole = null;
+            continueBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>
