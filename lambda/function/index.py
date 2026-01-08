@@ -85,7 +85,14 @@ def generate_saml_metadata():
 
 
 def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION):
-    """Generate SAML Response for AWS Console SSO"""
+    """
+    Generate SAML Response for AWS Console SSO
+    
+    NOTE: This implementation generates unsigned SAML assertions for simplicity.
+    AWS Console accepts unsigned SAML assertions from trusted IdPs configured
+    with valid certificates. For enhanced security in production, consider
+    implementing proper XML signature using libraries like python-saml or signxml.
+    """
     now = datetime.utcnow()
     not_before = now - timedelta(minutes=5)
     not_on_or_after = now + timedelta(seconds=session_duration)
@@ -93,8 +100,18 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
     # Extract account ID and role name from ARN
     # Format: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
     arn_parts = role_arn.split(':')
+    
+    # Validate ARN format
+    if len(arn_parts) < 6 or arn_parts[0] != 'arn' or arn_parts[2] != 'iam':
+        raise ValueError(f"Invalid IAM role ARN format: {role_arn}")
+    
     account_id = arn_parts[4]
-    role_name = arn_parts[5].split('/')[-1]
+    role_path = arn_parts[5] if len(arn_parts) > 5 else ''
+    
+    if not role_path.startswith('role/'):
+        raise ValueError(f"ARN does not specify a role: {role_arn}")
+    
+    role_name = role_path.split('/')[-1]
     
     # Generate unique IDs
     response_id = f"_{''.join(f'{b:02x}' for b in os.urandom(20))}"

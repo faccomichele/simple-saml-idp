@@ -62,7 +62,28 @@ pip install pip-audit
 pip-audit -r lambda/layer/requirements.txt
 ```
 
-### 4. No Multi-Factor Authentication (MFA)
+### 4. SAML Assertion Signing
+
+**Current Implementation**: SAML assertions are generated but not cryptographically signed
+
+**Risk**: While AWS accepts unsigned assertions from properly configured SAML providers, signed assertions provide:
+- Protection against tampering
+- Non-repudiation
+- Enhanced trust
+
+**Production Recommendation**: Implement XML digital signatures:
+- Use libraries like `python-saml` or `signxml`
+- Sign SAML Response and Assertion elements
+- Use RSA-SHA256 or stronger algorithms
+
+**Implementation Note**: AWS Console SAML integration works with unsigned assertions when:
+- The SAML provider is properly configured in IAM
+- The certificate is registered in the SAML provider
+- The assertion structure is correct
+
+For enhanced security, consider implementing full SAML 2.0 signatures.
+
+### 5. No Multi-Factor Authentication (MFA)
 
 **Current Implementation**: Single-factor authentication (password only)
 
@@ -73,7 +94,7 @@ pip-audit -r lambda/layer/requirements.txt
 - SMS-based OTP
 - Hardware tokens (YubiKey)
 
-### 5. No Rate Limiting
+### 6. No Rate Limiting
 
 **Current Implementation**: No rate limiting on authentication attempts
 
