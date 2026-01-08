@@ -223,16 +223,30 @@ def get_user_roles(username):
         for item in response.get('Items', []):
             role_arn = item.get('role_arn')
             
+            # Skip invalid ARNs
+            if not role_arn or ':' not in role_arn:
+                print(f"Skipping invalid role ARN: {role_arn}")
+                continue
+            
+            arn_parts = role_arn.split(':')
+            if len(arn_parts) < 6:
+                print(f"Skipping malformed role ARN: {role_arn}")
+                continue
+            
+            account_id = arn_parts[4]
+            
             # Filter by allowed accounts if configured
-            if ALLOWED_AWS_ACCOUNTS:
-                account_id = role_arn.split(':')[4]
-                if account_id not in ALLOWED_AWS_ACCOUNTS:
-                    continue
+            if ALLOWED_AWS_ACCOUNTS and account_id not in ALLOWED_AWS_ACCOUNTS:
+                continue
+            
+            # Extract role name safely
+            role_path = arn_parts[5] if len(arn_parts) > 5 else ''
+            role_name = role_path.split('/')[-1] if '/' in role_path else role_path
             
             roles.append({
                 'role_arn': role_arn,
-                'account_id': role_arn.split(':')[4],
-                'role_name': role_arn.split('/')[-1],
+                'account_id': account_id,
+                'role_name': role_name,
                 'account_name': item.get('account_name', 'Unknown'),
                 'description': item.get('description', '')
             })

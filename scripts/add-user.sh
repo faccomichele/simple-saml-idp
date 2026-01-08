@@ -20,13 +20,22 @@ PASSWORD=$3
 PASSWORD_HASH=$(echo -n "$PASSWORD" | sha256sum | awk '{print $1}')
 
 # Create user item
+# Extract first and last name safely (handle usernames with or without dots)
+if [[ "$USERNAME" == *.* ]]; then
+    FIRST_NAME=$(echo "$USERNAME" | cut -d. -f1 | sed 's/\b\(.\)/\u\1/g')
+    LAST_NAME=$(echo "$USERNAME" | cut -d. -f2 | sed 's/\b\(.\)/\u\1/g')
+else
+    FIRST_NAME=$(echo "$USERNAME" | sed 's/\b\(.\)/\u\1/g')
+    LAST_NAME="User"
+fi
+
 USER_ITEM=$(cat <<EOF
 {
   "username": {"S": "$USERNAME"},
   "email": {"S": "$USERNAME@example.com"},
   "password_hash": {"S": "$PASSWORD_HASH"},
-  "first_name": {"S": "$(echo $USERNAME | cut -d. -f1 | sed 's/\b\(.\)/\u\1/g')"},
-  "last_name": {"S": "$(echo $USERNAME | cut -d. -f2 | sed 's/\b\(.\)/\u\1/g')"},
+  "first_name": {"S": "$FIRST_NAME"},
+  "last_name": {"S": "$LAST_NAME"},
   "enabled": {"BOOL": true},
   "created_at": {"S": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 }
