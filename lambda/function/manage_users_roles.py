@@ -41,14 +41,17 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     }
     """
-    # Log event without sensitive data
-    safe_event = event.copy()
-    if 'data' in safe_event and isinstance(safe_event['data'], dict):
-        safe_data = safe_event['data'].copy()
-        if 'password' in safe_data:
-            safe_data['password'] = '***REDACTED***'
-        safe_event['data'] = safe_data
-    print(f"Received event: {json.dumps(safe_event)}")
+    # Log only non-sensitive metadata from the event
+    operation = event.get('operation')
+    username = None
+    data_field = event.get('data')
+    if isinstance(data_field, dict):
+        username = data_field.get('username')
+    log_payload = {
+        "operation": operation,
+        "username": username,
+    }
+    print(f"Received event metadata: {json.dumps(log_payload)}")
     
     try:
         operation = event.get('operation')
@@ -403,7 +406,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
         
         updated_item = response['Attributes']
         
-        print(f"Successfully updated role mapping: {username} -> {role_arn}")
+        print("Successfully updated role mapping")
         return success_response(f"Role mapping updated successfully", updated_item)
         
     except ClientError as e:
