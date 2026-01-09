@@ -5,7 +5,7 @@ Handles SAML authentication, assertion generation, and AWS Console login
 import json
 import base64
 import os
-import hashlib
+import bcrypt
 import hmac
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlencode
@@ -194,14 +194,13 @@ def authenticate_user(username, password):
         
         user = response['Item']
         
-        # Simple password hash comparison (SHA256)
-        # WARNING: SHA256 is NOT SECURE for password hashing in production!
-        # It's fast and vulnerable to rainbow table attacks.
-        # For production use, implement bcrypt, Argon2, or scrypt with proper salt.
-        # This is provided as a simple example for demonstration purposes only.
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        if user.get('password_hash') == password_hash:
+        # Verify password using bcrypt
+        # The password hash is stored as a string in DynamoDB, so we need to encode it to bytes
+        stored_hash = user.get('password_hash')
+        if not stored_hash:
+            return False
+
+        if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
             return True
         
         return False
