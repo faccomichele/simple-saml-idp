@@ -70,6 +70,8 @@ For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 - **[DEPLOYMENT.md](DEPLOYMENT.md)**: Detailed deployment guide with step-by-step instructions
 - **[AUTHENTICATION_FLOW.md](AUTHENTICATION_FLOW.md)**: Understand how the SAML authentication works
 - **[IAM_POLICY.md](IAM_POLICY.md)**: Required IAM permissions for deployment and operations
+- **[USER_ROLE_MANAGEMENT.md](USER_ROLE_MANAGEMENT.md)**: Complete guide for managing users and roles via Lambda
+- **[QUICKSTART_USER_MANAGEMENT.md](QUICKSTART_USER_MANAGEMENT.md)**: Quick reference for user/role operations
 
 ## Quick Start (Summary)
 

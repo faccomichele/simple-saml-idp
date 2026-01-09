@@ -236,12 +236,57 @@ aws iam attach-role-policy \
 
 #### 5.1 Create Test User
 
+You can use either the new Lambda function (recommended) or the bash scripts:
+
+**Option A: Using Lambda Function (Recommended)**
+
+```bash
+LAMBDA_FUNCTION=$(terraform output -raw manage_users_roles_lambda_name)
+
+# Create user
+aws lambda invoke \
+  --function-name "$LAMBDA_FUNCTION" \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{
+    "operation": "create_user",
+    "data": {
+      "username": "john.doe",
+      "password": "MySecurePassword123"
+    }
+  }' response.json && cat response.json
+```
+
+**Option B: Using Bash Script**
+
 ```bash
 USERS_TABLE=$(terraform output -raw dynamodb_users_table)
 ./scripts/add-user.sh "$USERS_TABLE" john.doe "MySecurePassword123"
 ```
 
+**Note**: The Lambda function uses secure bcrypt password hashing and supports update operations. See [QUICKSTART_USER_MANAGEMENT.md](QUICKSTART_USER_MANAGEMENT.md) for more details.
+
 #### 5.2 Add Role Mapping
+
+**Option A: Using Lambda Function (Recommended)**
+
+```bash
+LAMBDA_FUNCTION=$(terraform output -raw manage_users_roles_lambda_name)
+
+# Add role mapping
+aws lambda invoke \
+  --function-name "$LAMBDA_FUNCTION" \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{
+    "operation": "create_role",
+    "data": {
+      "username": "john.doe",
+      "role_arn": "arn:aws:iam::123456789012:role/SAMLAdminRole",
+      "account_name": "Production Account"
+    }
+  }' response.json && cat response.json
+```
+
+**Option B: Using Bash Script**
 
 ```bash
 ROLES_TABLE=$(terraform output -raw dynamodb_roles_table)
