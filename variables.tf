@@ -1,3 +1,8 @@
+variable "tags" {
+  description = "Map of tags to assign to resources"
+  type        = map(string)
+}
+
 variable "idp_entity_id" {
   description = "SAML Identity Provider Entity ID (must be a valid URL)"
   type        = string
