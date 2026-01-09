@@ -3,6 +3,15 @@
 
 set -e
 
+# Configuration - bcrypt rounds (safe range: 10-15)
+BCRYPT_ROUNDS=12
+
+# Validate BCRYPT_ROUNDS
+if ! [[ "$BCRYPT_ROUNDS" =~ ^[0-9]+$ ]] || [ "$BCRYPT_ROUNDS" -lt 10 ] || [ "$BCRYPT_ROUNDS" -gt 15 ]; then
+    echo "Error: Invalid BCRYPT_ROUNDS value. Must be between 10-15."
+    exit 1
+fi
+
 if [ $# -lt 3 ]; then
     echo "Usage: $0 <table-name> <username> <password>"
     echo "Example: $0 simple-saml-idp-users-dev john.doe mypassword"
@@ -13,11 +22,10 @@ TABLE_NAME=$1
 USERNAME=$2
 PASSWORD=$3
 
-# Generate password hash (SHA256)
-# WARNING: SHA256 is NOT SECURE for password hashing in production!
-# For production use, implement bcrypt, Argon2, or scrypt with proper salt.
-# This is provided as a simple example for demonstration purposes only.
-PASSWORD_HASH=$(echo -n "$PASSWORD" | sha256sum | awk '{print $1}')
+# Generate password hash using bcrypt via Python
+# Using printf to safely pass password without shell interpolation
+# Using rounds=$BCRYPT_ROUNDS to match Lambda function configuration
+PASSWORD_HASH=$(printf '%s' "$PASSWORD" | python3 -c "import sys, bcrypt; password = sys.stdin.read(); print(bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=$BCRYPT_ROUNDS)).decode('utf-8'))")
 
 # Create user item
 # Extract first and last name safely (handle usernames with or without dots)

@@ -1,0 +1,9 @@
+{
+  "operation": "create_role",
+  "data": {
+    "username": "john.doe",
+    "role_arn": "arn:aws:iam::123456789012:role/AdminRole",
+    "account_name": "Production Account",
+    "description": "Full administrator access to production resources"
+  }
+}
