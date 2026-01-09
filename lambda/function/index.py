@@ -7,6 +7,8 @@ import base64
 import os
 import bcrypt
 import hmac
+from lxml import etree
+from signxml import XMLSigner, methods
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlencode
 import boto3
@@ -180,7 +182,53 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
   </saml:Assertion>
 </samlp:Response>'''
     
-    return saml_response
+    # === Signing Logic ===
+    try:
+        # 1. Parse the generated XML string
+        root = etree.fromstring(saml_response.encode('utf-8'))
+
+        # 2. Retrieve credentials from SSM
+        # Ensure your private key is stored in SSM without PEM headers or newlines if possible,
+        # or handle formatting here. signxml expects a PEM-formatted string or bytes.
+        private_key = get_ssm_parameter('saml/private_key', with_decryption=True)
+        certificate = get_ssm_parameter('saml/certificate', with_decryption=False)
+        
+        if not private_key:
+            print("Error: saml/private_key not found in SSM")
+            raise Exception("SSM parameter saml/private_key is missing")
+
+        # 3. Locate the Assertion element to sign
+        ns = {'saml': 'urn:oasis:names:tc:SAML:2.0:assertion'}
+        assertion = root.find('.//saml:Assertion', ns)
+        
+        if assertion is None:
+            raise Exception("Malformed SAML: Assertion element not found")
+
+        # 4. Sign the Assertion
+        # AWS requires Enveloped Signature, RSA-SHA256, and Exclusive Canonicalization
+        signer = XMLSigner(
+            method=methods.enveloped,
+            signature_algorithm="rsa-sha256",
+            digest_algorithm="sha256",
+            c14n_algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"
+        )
+        
+        signed_assertion = signer.sign(
+            assertion,
+            key=private_key,
+            cert=certificate
+        )
+
+        # 5. Replace the unsigned assertion with the signed one
+        assertion.getparent().replace(assertion, signed_assertion)
+        
+        # 6. Return the signed XML string
+        return etree.tostring(root, encoding='unicode')
+
+    except Exception as e:
+        print(f"Error signing SAML response: {e}")
+        # In case of signing failure, we re-raise to avoid sending unsigned/invalid SAML
+        raise
 
 
 def authenticate_user(username, password):
