@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'SAML Federated Administrator Role - Deploys an IAM role for SAML federation with AdministratorAccess'
+
+# Stack Name: saml-admin-role
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Repository Configuration
+        Parameters:
+          - Organization
+          - ProjectName
+      - Label:
+          default: Infrastructure References
+        Parameters:
+          - SAMLProviderName
+          - RoleName
+    ParameterLabels:
+      Organization:
+        default: GitHub Organization
+      ProjectName:
+        default: Repository Name
+      SAMLProviderName:
+        default: SAML Provider Name
+      RoleName:
+        default: Role Name
+
+Parameters:
+  Organization:
+    Type: String
+    Description: GitHub organization name
+    Default: faccomichele
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: ^[a-z0-9-]+$
+    ConstraintDescription: Must be lowercase alphanumeric with hyphens only
+  
+  ProjectName:
+    Type: String
+    Description: Name of the GitHub repository (change this when copying to another repo)
+    Default: simple-saml-idp
+    MinLength: 1
+    MaxLength: 100
+    AllowedPattern: ^[a-zA-Z0-9._-]+$
+    ConstraintDescription: Must be a valid GitHub repository name
+
+  SAMLProviderName:
+    Type: String
+    Description: The name of the existing SAML Provider in IAM (e.g., SimpleSAMLIdP)
+    Default: SimpleSAMLIdP
+    MinLength: 1
+  
+  RoleName:
+    Type: String
+    Description: The name of the IAM Role to create
+    Default: SAMLAdminRole
+    AllowedPattern: '[\w+=,.@-]+'
+
+Resources:
+  SAMLAdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      Description: Administrator role for SAML SSO federation
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}'
+            Action: 'sts:AssumeRoleWithSAML'
+            Condition:
+              StringEquals:
+                'SAML:aud': 'https://signin.aws.amazon.com/saml'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Organization
+          Value: !Ref Organization
+        - Key: RepositoryURL
+          Value: !Sub 'https://github.com/${Organization}/${ProjectName}'
+        - Key: Automation
+          Value: CloudFormation
+        - Key: RepositoryPath
+          Value: cloudformation
+        - Key: RepositoryFile
+          Value: saml-admin-role.yaml
+        - Key: Description
+          Value: !Sub 'IAM Admin role for SAML Federated authentication'
+        - Key: Region
+          Value: !Ref 'AWS::Region'
+
+Outputs:
+  RoleArn:
+    Description: The ARN of the created SAML Admin Role
+    Value: !GetAtt SAMLAdminRole.Arn
