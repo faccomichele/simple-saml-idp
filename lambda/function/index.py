@@ -5,7 +5,6 @@ Handles SAML authentication, assertion generation, and AWS Console login
 import json
 import base64
 import os
-import hmac
 import io
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlencode
