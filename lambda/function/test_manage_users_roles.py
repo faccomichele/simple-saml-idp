@@ -300,6 +300,24 @@ def test_password_hashing():
     
     print("✓ test_password_hashing passed")
 
+def test_username_with_multiple_dots():
+    """Test username parsing with multiple dots"""
+    event = {
+        "operation": "create_user",
+        "data": {
+            "username": "john.van.der.berg",
+            "password": "testpass"
+        }
+    }
+    
+    result = manage_users_roles.lambda_handler(event, None)
+    assert result['statusCode'] == 200
+    body = json.loads(result['body'])
+    assert body['success'] == True
+    assert body['data']['first_name'] == 'John'
+    assert body['data']['last_name'] == 'Van Der Berg'
+    print("✓ test_username_with_multiple_dots passed")
+
 if __name__ == "__main__":
     print("Running Lambda function tests...")
     print()
@@ -316,6 +334,7 @@ if __name__ == "__main__":
         test_missing_operation()
         test_invalid_operation()
         test_password_hashing()
+        test_username_with_multiple_dots()
         
         print()
         print("=" * 50)

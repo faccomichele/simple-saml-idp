@@ -92,8 +92,10 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         email = data.get('email', f"{username}@example.com")
         
         if '.' in username:
-            first_name_default = username.split('.')[0].capitalize()
-            last_name_default = username.split('.')[1].capitalize()
+            # Split username into first and last name (handle multiple dots by taking first and rest)
+            parts = username.split('.', 1)
+            first_name_default = parts[0].capitalize()
+            last_name_default = parts[1].replace('.', ' ').title() if len(parts) > 1 else "User"
         else:
             first_name_default = username.capitalize()
             last_name_default = "User"

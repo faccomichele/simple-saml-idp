@@ -59,6 +59,8 @@ resource "aws_lambda_function" "manage_users_roles" {
   timeout          = 30
   memory_size      = 256
 
+  layers = [aws_lambda_layer_version.saml_dependencies.arn]
+
   environment {
     variables = {
       USERS_TABLE = aws_dynamodb_table.users.name
