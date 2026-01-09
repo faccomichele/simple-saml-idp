@@ -13,11 +13,9 @@ TABLE_NAME=$1
 USERNAME=$2
 PASSWORD=$3
 
-# Generate password hash (SHA256)
-# WARNING: SHA256 is NOT SECURE for password hashing in production!
-# For production use, implement bcrypt, Argon2, or scrypt with proper salt.
-# This is provided as a simple example for demonstration purposes only.
-PASSWORD_HASH=$(echo -n "$PASSWORD" | sha256sum | awk '{print $1}')
+# Generate password hash using bcrypt via Python
+# bcrypt is a secure password hashing algorithm with automatic salting
+PASSWORD_HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw('$PASSWORD'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'))")
 
 # Create user item
 # Extract first and last name safely (handle usernames with or without dots)

@@ -1,0 +1,11 @@
+{
+  "operation": "create_user",
+  "data": {
+    "username": "john.doe",
+    "password": "password",
+    "email": "john.doe@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "enabled": true
+  }
+}

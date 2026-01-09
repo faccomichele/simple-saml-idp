@@ -1,0 +1,7 @@
+{
+  "operation": "create_role",
+  "data": {
+    "username": "john.doe",
+    "role_arn": "arn:aws:iam::987654321098:role/ReadOnlyRole"
+  }
+}

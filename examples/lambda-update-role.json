@@ -1,0 +1,9 @@
+{
+  "operation": "update_role",
+  "data": {
+    "username": "john.doe",
+    "role_arn": "arn:aws:iam::123456789012:role/AdminRole",
+    "account_name": "Production Environment",
+    "description": "Updated: Full administrative access with enhanced permissions"
+  }
+}

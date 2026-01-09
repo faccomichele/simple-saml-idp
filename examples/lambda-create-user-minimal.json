@@ -1,0 +1,7 @@
+{
+  "operation": "create_user",
+  "data": {
+    "username": "jane.smith",
+    "password": "password"
+  }
+}

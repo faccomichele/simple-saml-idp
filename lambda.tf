@@ -47,3 +47,26 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.saml.execution_arn}/*/*"
 }
+
+# Lambda Function for User and Role Management
+resource "aws_lambda_function" "manage_users_roles" {
+  filename         = data.archive_file.lambda_function.output_path
+  function_name    = "${local.project_name}-manage-users-roles-${local.environment}"
+  role             = aws_iam_role.lambda_execution.arn
+  handler          = "manage_users_roles.lambda_handler"
+  source_code_hash = data.archive_file.lambda_function.output_base64sha256
+  runtime          = "python3.11"
+  timeout          = 30
+  memory_size      = 256
+
+  environment {
+    variables = {
+      USERS_TABLE = aws_dynamodb_table.users.name
+      ROLES_TABLE = aws_dynamodb_table.roles.name
+    }
+  }
+
+  tags = {
+    Name = "${local.project_name}-manage-users-roles-${local.environment}"
+  }
+}

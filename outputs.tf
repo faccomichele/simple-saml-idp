@@ -42,3 +42,13 @@ output "saml_entity_id" {
   description = "SAML Identity Provider Entity ID"
   value       = local.idp_entity_id
 }
+
+output "manage_users_roles_lambda_arn" {
+  description = "ARN of the Lambda function for managing users and roles"
+  value       = aws_lambda_function.manage_users_roles.arn
+}
+
+output "manage_users_roles_lambda_name" {
+  description = "Name of the Lambda function for managing users and roles"
+  value       = aws_lambda_function.manage_users_roles.function_name
+}

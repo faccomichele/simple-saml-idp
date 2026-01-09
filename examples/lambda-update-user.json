@@ -1,0 +1,9 @@
+{
+  "operation": "update_user",
+  "data": {
+    "username": "john.doe",
+    "email": "john.doe@newdomain.com",
+    "first_name": "Jonathan",
+    "enabled": false
+  }
+}
