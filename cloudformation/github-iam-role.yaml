@@ -1,9 +1,18 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'GitHub Actions IAM Role - Template for deploying repository-specific GitHub Actions roles that assume the shared OIDC provider'
 
-Transform: AWS::LanguageExtensions
-
 # Stack Name: github-role-for-simple-saml-idp
+
+# DEPLOYMENT INSTRUCTIONS:
+# PREREQUISITE: The GitHub OIDC provider must be deployed first using the github-identity-provider.yaml template.
+#               This creates the shared OIDC provider that this role will reference.
+#               Deploy it with stack name 'github-identity-provider' (or update OIDCProviderStackName parameter below).
+# 
+# 1. Copy this template to your target repository
+# 2. Update the ProjectName parameter default to match your repository name
+# 3. Optionally adjust Environment parameter if needed
+# 4. Add additional managed policies or inline policies as required for your application
+# 5. Deploy with: aws cloudformation create-stack --stack-name github-role-for-<repo-name> --template-body file://github-iam-role-template.yaml --capabilities CAPABILITY_NAMED_IAM
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -67,6 +76,16 @@ Parameters:
   TerraformAccessPolicyAccountID:
     Type: String
     Description: The account ID for Terraform access managed policy (from terraform-core-aws stack)
+
+# Mapping from lower to upper as CFT does not have intrinsic functions for string case conversion
+Mappings:
+  EnvironmentMap:
+    dev:
+      Upper: DEV
+    stg:
+      Upper: STG
+    prod:
+      Upper: PROD
 
 Resources:
   # IAM role for GitHub Actions (repository-specific)
@@ -271,6 +290,7 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:DeleteLogGroup
                   - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
                   - logs:ListTagsLogGroup
                   - logs:TagLogGroup
                   - logs:UntagLogGroup
@@ -281,6 +301,26 @@ Resources:
                   - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/simple-saml-idp-*-${Environment}:*'
                   - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/apigateway/simple-saml-idp-${Environment}'
                   - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/apigateway/simple-saml-idp-${Environment}:*'
+                  - !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group::log-stream:'
+
+              - Sid: CloudWatchLogsResourcePolicy
+                Effect: Allow
+                Action:
+                  - logs:ListTagsForResource
+                  - logs:ListLogDeliveries
+                  - logs:CreateLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                Resource: '*'
+
+              - Sid: IAMServiceLinkedRole
+                Effect: Allow
+                Action:
+                  - iam:CreateServiceLinkedRole
+                Resource: '*'
               
               # Terraform state and resource discovery
               # Wildcard resource access is required for list/discovery operations that Terraform
@@ -321,19 +361,20 @@ Resources:
 
 Outputs:
   AwsId:
-    Value: !Sub '${Environment}_AWS_ID = ${AWS::AccountId}'
+    Value:
+      Fn::Join:
+        - ''
+        - - !FindInMap [EnvironmentMap, !Ref Environment, Upper]
+          - '_AWS_ID = '
+          - !Ref 'AWS::AccountId'
   RoleSecret:
     Value:
-      Fn::Sub:
-        - '${Environment}_ROLE_SECRET = ${SecretValue}'
-        - SecretValue:
-            Fn::Select:
-              - Fn::Subtract:
-                  - Fn::Length:
-                      - Fn::Split:
-                          - "-"
-                          - !GetAtt GitHubActionsRole.Arn
-                  - 1
+      Fn::Join:
+        - ''
+        - - !FindInMap [EnvironmentMap, !Ref Environment, Upper]
+          - '_ROLE_SECRET = '
+          - Fn::Select:
+              - 7
               - Fn::Split:
                   - "-"
                   - !GetAtt GitHubActionsRole.Arn

@@ -40,5 +40,5 @@ output "saml_sso_url" {
 
 output "saml_entity_id" {
   description = "SAML Identity Provider Entity ID"
-  value       = var.idp_entity_id
+  value       = local.idp_entity_id
 }

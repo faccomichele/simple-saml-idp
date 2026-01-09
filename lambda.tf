@@ -25,7 +25,7 @@ resource "aws_lambda_function" "saml_processor" {
     variables = {
       USERS_TABLE           = aws_dynamodb_table.users.name
       ROLES_TABLE           = aws_dynamodb_table.roles.name
-      IDP_ENTITY_ID         = var.idp_entity_id
+      IDP_ENTITY_ID         = local.idp_entity_id
       IDP_BASE_URL          = var.idp_base_url
       SESSION_DURATION      = var.session_duration_seconds
       SSM_PARAMETER_PREFIX  = "/${local.project_name}/${local.environment}"

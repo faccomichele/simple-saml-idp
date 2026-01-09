@@ -6,11 +6,13 @@ variable "tags" {
 variable "idp_entity_id" {
   description = "SAML Identity Provider Entity ID (must be a valid URL)"
   type        = string
+  default     = "placeholder"
 }
 
 variable "idp_base_url" {
   description = "Base URL for the IdP (used for ACS URL and SSO endpoints)"
   type        = string
+  default     = "placeholder"
 }
 
 variable "session_duration_seconds" {
