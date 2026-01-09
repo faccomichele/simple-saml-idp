@@ -16,7 +16,16 @@ dynamodb = boto3.resource('dynamodb')
 # Environment variables
 USERS_TABLE = os.environ.get('USERS_TABLE', 'simple-saml-idp-users-dev')
 ROLES_TABLE = os.environ.get('ROLES_TABLE', 'simple-saml-idp-roles-dev')
-BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
+
+# Bcrypt rounds with validation (safe range: 10-15)
+try:
+    BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
+    if BCRYPT_ROUNDS < 10 or BCRYPT_ROUNDS > 15:
+        print(f"Warning: BCRYPT_ROUNDS={BCRYPT_ROUNDS} is outside safe range (10-15). Using default of 12.")
+        BCRYPT_ROUNDS = 12
+except ValueError:
+    print("Warning: Invalid BCRYPT_ROUNDS value. Using default of 12.")
+    BCRYPT_ROUNDS = 12
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:

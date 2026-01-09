@@ -3,8 +3,14 @@
 
 set -e
 
-# Configuration
+# Configuration - bcrypt rounds (safe range: 10-15)
 BCRYPT_ROUNDS=12
+
+# Validate BCRYPT_ROUNDS
+if ! [[ "$BCRYPT_ROUNDS" =~ ^[0-9]+$ ]] || [ "$BCRYPT_ROUNDS" -lt 10 ] || [ "$BCRYPT_ROUNDS" -gt 15 ]; then
+    echo "Error: Invalid BCRYPT_ROUNDS value. Must be between 10-15."
+    exit 1
+fi
 
 if [ $# -lt 3 ]; then
     echo "Usage: $0 <table-name> <username> <password>"
