@@ -151,7 +151,7 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         response_item = item.copy()
         response_item.pop('password_hash')
         
-        print(f"Successfully created user: {username}")
+        print("Successfully created user")
         return success_response(f"User '{username}' created successfully", response_item)
         
     except ClientError as e:
