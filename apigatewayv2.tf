@@ -1,6 +1,6 @@
 # API Gateway HTTP API
 resource "aws_apigatewayv2_api" "saml" {
-  name          = "${var.project_name}-api-${var.environment}"
+  name          = "${local.project_name}-api-${local.environment}"
   protocol_type = "HTTP"
   description   = "SAML IdP API for AWS Console SSO"
 
@@ -12,7 +12,7 @@ resource "aws_apigatewayv2_api" "saml" {
   }
 
   tags = {
-    Name = "${var.project_name}-api-${var.environment}"
+    Name = "${local.project_name}-api-${local.environment}"
   }
 }
 
@@ -53,7 +53,7 @@ resource "aws_apigatewayv2_route" "acs" {
 # API Stage
 resource "aws_apigatewayv2_stage" "saml" {
   api_id      = aws_apigatewayv2_api.saml.id
-  name        = var.environment
+  name        = local.environment
   auto_deploy = true
 
   access_log_settings {
@@ -71,6 +71,6 @@ resource "aws_apigatewayv2_stage" "saml" {
   }
 
   tags = {
-    Name = "${var.project_name}-api-stage-${var.environment}"
+    Name = "${local.project_name}-api-stage-${local.environment}"
   }
 }

@@ -1,6 +1,6 @@
 # DynamoDB Tables
 resource "aws_dynamodb_table" "users" {
-  name           = "${var.project_name}-users-${var.environment}"
+  name           = "${local.project_name}-users-${local.environment}"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "username"
 
@@ -29,12 +29,12 @@ resource "aws_dynamodb_table" "users" {
   }
 
   tags = {
-    Name = "${var.project_name}-users-${var.environment}"
+    Name = "${local.project_name}-users-${local.environment}"
   }
 }
 
 resource "aws_dynamodb_table" "roles" {
-  name           = "${var.project_name}-roles-${var.environment}"
+  name           = "${local.project_name}-roles-${local.environment}"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "username"
   range_key      = "role_arn"
@@ -58,6 +58,6 @@ resource "aws_dynamodb_table" "roles" {
   }
 
   tags = {
-    Name = "${var.project_name}-roles-${var.environment}"
+    Name = "${local.project_name}-roles-${local.environment}"
   }
 }

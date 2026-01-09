@@ -4,16 +4,16 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   retention_in_days = 7
 
   tags = {
-    Name = "${var.project_name}-lambda-logs-${var.environment}"
+    Name = "${local.project_name}-lambda-logs-${local.environment}"
   }
 }
 
 # CloudWatch Log Group for API Gateway
 resource "aws_cloudwatch_log_group" "api_logs" {
-  name              = "/aws/apigateway/${var.project_name}-${var.environment}"
+  name              = "/aws/apigateway/${local.project_name}-${local.environment}"
   retention_in_days = 7
 
   tags = {
-    Name = "${var.project_name}-api-logs-${var.environment}"
+    Name = "${local.project_name}-api-logs-${local.environment}"
   }
 }

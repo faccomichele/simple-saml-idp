@@ -1,6 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'GitHub Actions IAM Role - Template for deploying repository-specific GitHub Actions roles that assume the shared OIDC provider'
 
+Transform: AWS::LanguageExtensions
+
 # Stack Name: github-role-for-simple-saml-idp
 
 Metadata:
@@ -317,10 +319,21 @@ Resources:
         - Key: Region
           Value: !Ref 'AWS::Region'
 
-Outputs:  
-  GitHubActionsRoleArn:
-    Description: ARN of the IAM role for GitHub Actions
-    Value: !GetAtt GitHubActionsRole.Arn
-    Export:
-      Name: !Sub '${AWS::StackName}-GitHubActionsRoleArn'
-
+Outputs:
+  AwsId:
+    Value: !Sub '${Environment}_AWS_ID = ${AWS::AccountId}'
+  RoleSecret:
+    Value:
+      Fn::Sub:
+        - '${Environment}_ROLE_SECRET = ${SecretValue}'
+        - SecretValue:
+            Fn::Select:
+              - Fn::Subtract:
+                  - Fn::Length:
+                      - Fn::Split:
+                          - "-"
+                          - !GetAtt GitHubActionsRole.Arn
+                  - 1
+              - Fn::Split:
+                  - "-"
+                  - !GetAtt GitHubActionsRole.Arn

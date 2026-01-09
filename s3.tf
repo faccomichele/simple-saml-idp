@@ -1,9 +1,9 @@
 # S3 Bucket for Login Page
 resource "aws_s3_bucket" "login_page" {
-  bucket = "${var.project_name}-login-${var.environment}-${data.aws_caller_identity.current.account_id}"
+  bucket = "${local.project_name}-login-${local.environment}-${data.aws_caller_identity.current.account_id}"
 
   tags = {
-    Name = "${var.project_name}-login-${var.environment}"
+    Name = "${local.project_name}-login-${local.environment}"
   }
 }
 
