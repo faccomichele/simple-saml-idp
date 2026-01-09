@@ -2,7 +2,7 @@
 resource "aws_lambda_layer_version" "saml_dependencies" {
   filename            = data.archive_file.lambda_layer.output_path
   layer_name          = "${local.project_name}-dependencies-${local.environment}"
-  compatible_runtimes = ["python3.11", "python3.12"]
+  compatible_runtimes = ["python3.13"]
   source_code_hash    = data.archive_file.lambda_layer.output_base64sha256
 
   description = "SAML and cryptography dependencies"
@@ -15,7 +15,7 @@ resource "aws_lambda_function" "saml_processor" {
   role             = aws_iam_role.lambda_execution.arn
   handler          = "index.lambda_handler"
   source_code_hash = data.archive_file.lambda_function.output_base64sha256
-  runtime          = "python3.11"
+  runtime          = "python3.13"
   timeout          = 30
   memory_size      = 512
 
@@ -55,7 +55,7 @@ resource "aws_lambda_function" "manage_users_roles" {
   role             = aws_iam_role.lambda_execution.arn
   handler          = "manage_users_roles.lambda_handler"
   source_code_hash = data.archive_file.lambda_function.output_base64sha256
-  runtime          = "python3.11"
+  runtime          = "python3.13"
   timeout          = 30
   memory_size      = 256
 
