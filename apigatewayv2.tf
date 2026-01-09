@@ -50,6 +50,18 @@ resource "aws_apigatewayv2_route" "acs" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+resource "aws_apigatewayv2_route" "mfa_setup" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "POST /mfa/setup"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "mfa_verify" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "POST /mfa/verify"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 # API Stage
 resource "aws_apigatewayv2_stage" "saml" {
   api_id      = aws_apigatewayv2_api.saml.id
