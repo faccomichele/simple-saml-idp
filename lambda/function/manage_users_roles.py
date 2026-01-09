@@ -318,7 +318,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
         # Put item in DynamoDB
         table.put_item(Item=item)
         
-        print(f"Successfully created role mapping: {username} -> {role_arn}")
+        print("Successfully created role mapping")
         return success_response(f"Role mapping created successfully", item)
         
     except ClientError as e:
