@@ -247,7 +247,7 @@ def update_user(data: Dict[str, Any]) -> Dict[str, Any]:
         if 'password_hash' in updated_item:
             updated_item.pop('password_hash')
         
-        print(f"Successfully updated user: {username}")
+        print("Successfully updated user")
         return success_response(f"User '{username}' updated successfully", updated_item)
         
     except ClientError as e:
