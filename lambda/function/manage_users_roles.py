@@ -16,6 +16,7 @@ dynamodb = boto3.resource('dynamodb')
 # Environment variables
 USERS_TABLE = os.environ.get('USERS_TABLE', 'simple-saml-idp-users-dev')
 ROLES_TABLE = os.environ.get('ROLES_TABLE', 'simple-saml-idp-roles-dev')
+BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -31,7 +32,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     }
     """
-    print(f"Received event: {json.dumps(event)}")
+    # Log event without sensitive data
+    safe_event = event.copy()
+    if 'data' in safe_event and isinstance(safe_event['data'], dict):
+        safe_data = safe_event['data'].copy()
+        if 'password' in safe_data:
+            safe_data['password'] = '***REDACTED***'
+        safe_event['data'] = safe_data
+    print(f"Received event: {json.dumps(safe_event)}")
     
     try:
         operation = event.get('operation')
@@ -86,8 +94,8 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Generate password hash using bcrypt
         # bcrypt automatically handles salting and uses a secure algorithm
-        # Using rounds=12 for a good balance between security and performance
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
+        # Using configurable work factor (default: 12) for balance between security and performance
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=BCRYPT_ROUNDS)).decode('utf-8')
         
         # Derive names from username if not provided
         email = data.get('email', f"{username}@example.com")
@@ -185,7 +193,7 @@ def update_user(data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Handle password update
         if 'password' in data:
-            password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
+            password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt(rounds=BCRYPT_ROUNDS)).decode('utf-8')
             update_expressions.append("#ph = :ph")
             expression_attribute_names['#ph'] = 'password_hash'
             expression_attribute_values[':ph'] = password_hash

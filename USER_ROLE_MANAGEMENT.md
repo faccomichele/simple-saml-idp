@@ -18,6 +18,10 @@ The Lambda function handles:
 - **Runtime**: Python 3.11
 - **Timeout**: 30 seconds
 - **Memory**: 256 MB
+- **Environment Variables**:
+  - `USERS_TABLE`: DynamoDB users table name
+  - `ROLES_TABLE`: DynamoDB roles table name
+  - `BCRYPT_ROUNDS` (optional): Bcrypt work factor (default: 12)
 
 ## Event Structure
 
@@ -397,9 +401,26 @@ This implementation uses **bcrypt** for password hashing, which is a secure, ind
 - Is specifically designed for password hashing (unlike general-purpose hash functions)
 
 **Password Storage**:
-- Passwords are hashed using bcrypt with a default cost factor of 12
+- Passwords are hashed using bcrypt with a default work factor of 12 rounds
 - Each password gets a unique salt automatically
 - The salt and hash are stored together in the bcrypt format: `$2b$12$...`
+- The work factor can be adjusted via the `BCRYPT_ROUNDS` environment variable (range: 10-14 recommended)
+
+**Adjusting Security Level**:
+To increase security at the cost of performance, set a higher rounds value in Terraform:
+```hcl
+resource "aws_lambda_function" "manage_users_roles" {
+  # ... other configuration ...
+  
+  environment {
+    variables = {
+      USERS_TABLE   = aws_dynamodb_table.users.name
+      ROLES_TABLE   = aws_dynamodb_table.roles.name
+      BCRYPT_ROUNDS = "13"  # Higher = more secure but slower
+    }
+  }
+}
+```
 
 **Password Verification** (for authentication):
 ```python
@@ -411,6 +432,8 @@ is_valid = bcrypt.checkpw(
     stored_hash.encode('utf-8')
 )
 ```
+
+**Security Note**: Passwords are never logged. All log entries redact password fields with `***REDACTED***` to prevent exposure in CloudWatch Logs.
 
 **Note**: The Lambda function only handles user/role management (creation and updates). Password verification should be implemented in your authentication logic (e.g., in the SAML processor Lambda).
 
