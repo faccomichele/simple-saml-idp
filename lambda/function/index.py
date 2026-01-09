@@ -403,6 +403,11 @@ def lambda_handler(event, context):
     method = http.get('method', '')
     path = http.get('path', '')
     
+    # Strip stage from path if present (fixes issue with API Gateway stages)
+    stage = request_context.get('stage', '$default')
+    if stage != '$default' and path.startswith(f"/{stage}/"):
+        path = path[len(stage) + 1:]
+    
     # Route handling
     if method == 'GET' and path == '/metadata':
         return handle_metadata(event)

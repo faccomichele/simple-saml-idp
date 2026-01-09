@@ -107,7 +107,7 @@ Required variables:
 If you need to update dependencies:
 
 ```bash
-./scripts/build-layer.sh
+./scripts/setup.sh
 ```
 
 ### 5. Deploy with Terraform

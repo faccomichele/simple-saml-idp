@@ -54,7 +54,7 @@ allowed_aws_accounts = []           # Empty = allow all
 If you modified `lambda/layer/requirements.txt`:
 
 ```bash
-./scripts/build-layer.sh
+./scripts/setup.sh
 ```
 
 This installs Python dependencies into `lambda/layer/python/`.

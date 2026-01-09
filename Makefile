@@ -37,7 +37,7 @@ clean: ## Clean build artifacts
 	find . -type f -name "*.pyc" -delete
 
 build-layer: ## Build Lambda layer with dependencies
-	./scripts/build-layer.sh
+	./scripts/setup.sh
 
 generate-cert: ## Generate SAML certificates
 	./scripts/generate-saml-cert.sh

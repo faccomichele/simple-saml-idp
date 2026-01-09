@@ -50,3 +50,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Metadata files
+saml-metadata*.xml
