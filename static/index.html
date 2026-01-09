@@ -213,6 +213,87 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* MFA-specific styles */
+        .mfa-setup,
+        .mfa-verify {
+            display: none;
+        }
+
+        .mfa-setup.show,
+        .mfa-verify.show {
+            display: block;
+        }
+
+        .qr-code-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .qr-code-container img {
+            max-width: 250px;
+            margin: 10px auto;
+        }
+
+        .secret-code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: #fff;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            margin: 15px 0;
+            word-break: break-all;
+            color: #374151;
+        }
+
+        .instructions {
+            background: #eff6ff;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #667eea;
+        }
+
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+        }
+
+        input[type="text"]#setupToken,
+        input[type="text"]#verifyToken {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 0.5em;
+            transition: border-color 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="text"]#setupToken:focus,
+        input[type="text"]#verifyToken:focus {
+            outline: none;
+            border-color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -255,6 +336,71 @@
                 <a href="#" id="backLink">← Back to login</a>
             </div>
         </div>
+
+        <!-- MFA Setup -->
+        <div id="mfaSetup" class="mfa-setup">
+            <h2 style="color: #374151; font-size: 20px; margin-bottom: 10px;">Setup Multi-Factor Authentication</h2>
+            
+            <div class="instructions">
+                <h3>📱 Setup Instructions</h3>
+                <ol>
+                    <li>Install <strong>Google Authenticator</strong> or any compatible TOTP app on your mobile device</li>
+                    <li>Open the app and scan the QR code below</li>
+                    <li>Or manually enter the secret key if you can't scan</li>
+                    <li>Enter the 6-digit verification code from your app to complete setup</li>
+                </ol>
+            </div>
+
+            <div class="qr-code-container">
+                <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">Scan this QR code with your authenticator app:</p>
+                <img id="qrCodeImage" src="" alt="QR Code">
+                
+                <p style="color: #6b7280; font-size: 13px; margin-top: 15px; margin-bottom: 5px;">Or enter this secret key manually:</p>
+                <div class="secret-code" id="secretCode"></div>
+            </div>
+
+            <form id="mfaSetupForm">
+                <div class="form-group">
+                    <label for="setupToken">Enter 6-digit verification code:</label>
+                    <input type="text" id="setupToken" name="setupToken" required 
+                           inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off">
+                </div>
+                <button type="submit" class="btn" id="setupMfaBtn">Complete Setup</button>
+                <div class="loading" id="setupLoading">
+                    <span class="spinner"></span>Verifying...
+                </div>
+            </form>
+
+            <div class="back-link">
+                <a href="#" id="backFromSetupLink">← Back to login</a>
+            </div>
+        </div>
+
+        <!-- MFA Verification -->
+        <div id="mfaVerify" class="mfa-verify">
+            <h2 style="color: #374151; font-size: 20px; margin-bottom: 10px;">Two-Factor Authentication</h2>
+            
+            <div class="instructions">
+                <h3>🔐 Verification Required</h3>
+                <p>Open your authenticator app and enter the 6-digit verification code.</p>
+            </div>
+
+            <form id="mfaVerifyForm">
+                <div class="form-group">
+                    <label for="verifyToken">Enter 6-digit verification code:</label>
+                    <input type="text" id="verifyToken" name="verifyToken" required 
+                           inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off">
+                </div>
+                <button type="submit" class="btn" id="verifyMfaBtn">Verify & Continue</button>
+                <div class="loading" id="verifyLoading">
+                    <span class="spinner"></span>Verifying...
+                </div>
+            </form>
+
+            <div class="back-link">
+                <a href="#" id="backFromVerifyLink">← Back to login</a>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -262,11 +408,15 @@
         const API_BASE_URL = 'YOUR_API_GATEWAY_URL'; // Replace with actual API Gateway URL
         
         let currentUsername = '';
+        let currentPassword = '';
+        let tempMfaSecret = '';  // Temporary secret for MFA setup
         let selectedRole = null;
 
         // DOM elements
         const loginForm = document.getElementById('loginForm');
         const roleSelection = document.getElementById('roleSelection');
+        const mfaSetup = document.getElementById('mfaSetup');
+        const mfaVerify = document.getElementById('mfaVerify');
         const errorDiv = document.getElementById('error');
         const roleList = document.getElementById('roleList');
         const continueBtn = document.getElementById('continueBtn');
@@ -283,12 +433,23 @@
             }, 5000);
         }
 
+        // Hide all screens
+        function hideAllScreens() {
+            loginForm.style.display = 'none';
+            roleSelection.classList.remove('show');
+            mfaSetup.classList.remove('show');
+            mfaVerify.classList.remove('show');
+        }
+
         // Handle login form submission
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            
+            currentUsername = username;
+            currentPassword = password;
             
             const loginBtn = document.getElementById('loginBtn');
             loginBtn.disabled = true;
@@ -308,9 +469,17 @@
 
                 const data = await response.json();
 
-                if (data.success && data.roles && data.roles.length > 0) {
-                    currentUsername = data.username;
-                    showRoleSelection(data.roles);
+                if (data.success) {
+                    if (data.mfa_setup_needed) {
+                        // Need to setup MFA
+                        await setupMFA(username);
+                    } else if (data.mfa_required) {
+                        // Need to verify MFA
+                        showMFAVerify();
+                    } else if (data.roles && data.roles.length > 0) {
+                        // Direct to role selection
+                        showRoleSelection(data.roles);
+                    }
                 } else {
                     showError(data.error || 'Authentication failed');
                 }
@@ -322,6 +491,138 @@
                 loginLoading.classList.remove('show');
             }
         });
+
+        // Setup MFA
+        async function setupMFA(username) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/mfa/setup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: username
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Display QR code and store temporary secret
+                    document.getElementById('qrCodeImage').src = `data:image/png;base64,${data.qr_code}`;
+                    document.getElementById('secretCode').textContent = data.temp_secret;
+                    tempMfaSecret = data.temp_secret;  // Store for verification
+                    
+                    hideAllScreens();
+                    mfaSetup.classList.add('show');
+                } else {
+                    showError(data.error || 'Failed to setup MFA');
+                }
+            } catch (error) {
+                console.error('MFA setup error:', error);
+                showError('Failed to setup MFA');
+            }
+        }
+
+        // Show MFA verification screen
+        function showMFAVerify() {
+            hideAllScreens();
+            mfaVerify.classList.add('show');
+            document.getElementById('verifyToken').value = '';
+            document.getElementById('verifyToken').focus();
+        }
+
+        // Handle MFA setup form submission
+        document.getElementById('mfaSetupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const token = document.getElementById('setupToken').value;
+            const setupBtn = document.getElementById('setupMfaBtn');
+            const setupLoading = document.getElementById('setupLoading');
+            
+            setupBtn.disabled = true;
+            setupLoading.classList.add('show');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/mfa/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: currentUsername,
+                        token: token,
+                        temp_secret: tempMfaSecret  // Send temporary secret for verification
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // MFA setup complete, clear password from memory
+                    tempMfaSecret = '';
+                    // Now login with MFA
+                    await loginWithMFA(token);
+                } else {
+                    showError(data.error || 'Invalid verification code. Please try again.');
+                }
+            } catch (error) {
+                console.error('MFA verification error:', error);
+                showError('Failed to verify MFA token');
+            } finally {
+                setupBtn.disabled = false;
+                setupLoading.classList.remove('show');
+            }
+        });
+
+        // Handle MFA verification form submission
+        document.getElementById('mfaVerifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const token = document.getElementById('verifyToken').value;
+            
+            await loginWithMFA(token);
+        });
+
+        // Login with MFA token
+        async function loginWithMFA(token) {
+            const verifyBtn = document.getElementById('verifyMfaBtn');
+            const verifyLoading = document.getElementById('verifyLoading');
+            
+            verifyBtn.disabled = true;
+            verifyLoading.classList.add('show');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: currentUsername,
+                        password: currentPassword,
+                        mfa_token: token
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.roles && data.roles.length > 0) {
+                    // Clear password from memory after successful authentication
+                    currentPassword = '';
+                    showRoleSelection(data.roles);
+                } else {
+                    showError(data.error || 'Authentication failed');
+                    document.getElementById('verifyToken').value = '';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Connection error');
+            } finally {
+                verifyBtn.disabled = false;
+                verifyLoading.classList.remove('show');
+            }
+        }
 
         // Show role selection screen
         function showRoleSelection(roles) {
@@ -348,7 +649,7 @@
                 roleList.appendChild(roleItem);
             });
 
-            loginForm.style.display = 'none';
+            hideAllScreens();
             roleSelection.classList.add('show');
         }
 
@@ -390,11 +691,44 @@
         // Handle back to login
         backLink.addEventListener('click', (e) => {
             e.preventDefault();
-            roleSelection.classList.remove('show');
+            resetToLogin();
+        });
+
+        document.getElementById('backFromSetupLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            resetToLogin();
+        });
+
+        document.getElementById('backFromVerifyLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            resetToLogin();
+        });
+
+        function resetToLogin() {
+            hideAllScreens();
             loginForm.style.display = 'block';
             document.getElementById('password').value = '';
+            currentPassword = '';  // Clear password from memory
+            tempMfaSecret = '';     // Clear temp secret
             selectedRole = null;
             continueBtn.disabled = true;
+        }
+
+        // Limit MFA token input to 6 digits
+        document.getElementById('setupToken').addEventListener('input', function(e) {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 6) {
+                this.value = this.value.slice(0, 6);
+            }
+        });
+
+        document.getElementById('verifyToken').addEventListener('input', function(e) {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 6) {
+                this.value = this.value.slice(0, 6);
+            }
         });
     </script>
 </body>

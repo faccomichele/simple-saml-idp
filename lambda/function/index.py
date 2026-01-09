@@ -5,12 +5,15 @@ Handles SAML authentication, assertion generation, and AWS Console login
 import json
 import base64
 import os
-import bcrypt
-import hmac
-from lxml import etree
-from signxml import XMLSigner, methods
+import io
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlencode
+
+import bcrypt
+import pyotp
+import qrcode
+from lxml import etree
+from signxml import XMLSigner, methods
 import boto3
 from botocore.exceptions import ClientError
 
@@ -257,6 +260,101 @@ def authenticate_user(username, password):
         return False
 
 
+def get_user(username):
+    """Get user details from DynamoDB"""
+    try:
+        table = dynamodb.Table(USERS_TABLE)
+        response = table.get_item(Key={'username': username})
+        
+        if 'Item' not in response:
+            return None
+        
+        return response['Item']
+    except Exception as e:
+        print(f"Error fetching user: {e}")
+        return None
+
+
+def verify_mfa_token(secret, token):
+    """Verify TOTP token against the secret"""
+    try:
+        totp = pyotp.TOTP(secret)
+        # Allow 1 interval before/after for clock skew
+        return totp.verify(token, valid_window=1)
+    except Exception as e:
+        print(f"MFA verification error: {e}")
+        return False
+
+
+def generate_mfa_secret():
+    """Generate a new MFA secret"""
+    return pyotp.random_base32()
+
+
+def generate_qr_code(username, secret):
+    """Generate QR code for MFA setup"""
+    try:
+        # Create provisioning URI for Google Authenticator
+        totp = pyotp.TOTP(secret)
+        provisioning_uri = totp.provisioning_uri(
+            name=username,
+            issuer_name="Simple SAML IdP"
+        )
+        
+        # Generate QR code
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(provisioning_uri)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+        
+        return img_base64
+    except Exception as e:
+        print(f"QR code generation error: {e}")
+        return None
+
+
+def save_mfa_secret(username, secret):
+    """Save MFA secret to DynamoDB"""
+    try:
+        table = dynamodb.Table(USERS_TABLE)
+        table.update_item(
+            Key={'username': username},
+            UpdateExpression='SET mfa_secret = :secret, updated_at = :updated',
+            ExpressionAttributeValues={
+                ':secret': secret,
+                ':updated': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+        )
+        return True
+    except Exception as e:
+        print(f"Error saving MFA secret: {e}")
+        return False
+
+
+def clear_mfa_secret(username):
+    """Clear MFA secret from DynamoDB (for reset)"""
+    try:
+        table = dynamodb.Table(USERS_TABLE)
+        table.update_item(
+            Key={'username': username},
+            UpdateExpression='REMOVE mfa_secret SET updated_at = :updated',
+            ExpressionAttributeValues={
+                ':updated': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+        )
+        return True
+    except Exception as e:
+        print(f"Error clearing MFA secret: {e}")
+        return False
+
+
 def get_user_roles(username):
     """Get available AWS roles for a user"""
     try:
@@ -345,7 +443,7 @@ def handle_metadata(event):
 
 
 def handle_login(event):
-    """Handle login request and return available roles"""
+    """Handle login request and return available roles or MFA setup requirement"""
     try:
         body = event.get('body', '')
         if event.get('isBase64Encoded'):
@@ -354,6 +452,7 @@ def handle_login(event):
         params = parse_qs(body)
         username = params.get('username', [''])[0]
         password = params.get('password', [''])[0]
+        mfa_token = params.get('mfa_token', [''])[0]
         
         if not username or not password:
             return create_json_response({
@@ -368,6 +467,41 @@ def handle_login(event):
                 'error': 'Invalid credentials'
             }, 401)
         
+        # Get user details to check MFA status
+        user = get_user(username)
+        if not user:
+            return create_json_response({
+                'success': False,
+                'error': 'User not found'
+            }, 404)
+        
+        mfa_secret = user.get('mfa_secret')
+        
+        # If MFA is not set up, indicate that setup is needed
+        if not mfa_secret:
+            return create_json_response({
+                'success': True,
+                'username': username,
+                'mfa_required': False,
+                'mfa_setup_needed': True
+            })
+        
+        # If MFA is set up but token not provided, request it
+        if not mfa_token:
+            return create_json_response({
+                'success': True,
+                'username': username,
+                'mfa_required': True,
+                'mfa_setup_needed': False
+            })
+        
+        # Verify MFA token
+        if not verify_mfa_token(mfa_secret, mfa_token):
+            return create_json_response({
+                'success': False,
+                'error': 'Invalid MFA token'
+            }, 401)
+        
         # Get available roles
         roles = get_user_roles(username)
         
@@ -380,6 +514,8 @@ def handle_login(event):
         return create_json_response({
             'success': True,
             'username': username,
+            'mfa_required': False,
+            'mfa_setup_needed': False,
             'roles': roles
         })
         
@@ -440,6 +576,130 @@ def handle_sso(event):
         )
 
 
+def handle_mfa_setup(event):
+    """Handle MFA setup request and return QR code"""
+    try:
+        body = event.get('body', '')
+        if event.get('isBase64Encoded'):
+            body = base64.b64decode(body).decode('utf-8')
+        
+        params = parse_qs(body)
+        username = params.get('username', [''])[0]
+        
+        if not username:
+            return create_json_response({
+                'success': False,
+                'error': 'Username required'
+            }, 400)
+        
+        # Verify user exists
+        user = get_user(username)
+        if not user:
+            return create_json_response({
+                'success': False,
+                'error': 'User not found'
+            }, 404)
+        
+        # Generate new MFA secret
+        secret = generate_mfa_secret()
+        
+        # Generate QR code
+        qr_code = generate_qr_code(username, secret)
+        if not qr_code:
+            return create_json_response({
+                'success': False,
+                'error': 'Failed to generate QR code'
+            }, 500)
+        
+        # Return QR code and secret for display
+        # The secret will be saved only after successful verification
+        return create_json_response({
+            'success': True,
+            'qr_code': qr_code,
+            'temp_secret': secret  # Temporary secret for verification
+        })
+        
+    except Exception as e:
+        print(f"MFA setup error: {e}")
+        return create_json_response({
+            'success': False,
+            'error': 'Internal server error'
+        }, 500)
+
+
+def handle_mfa_verify(event):
+    """Handle MFA token verification and save secret if valid"""
+    try:
+        body = event.get('body', '')
+        if event.get('isBase64Encoded'):
+            body = base64.b64decode(body).decode('utf-8')
+        
+        params = parse_qs(body)
+        username = params.get('username', [''])[0]
+        token = params.get('token', [''])[0]
+        temp_secret = params.get('temp_secret', [''])[0]  # For new setup
+        
+        if not username or not token:
+            return create_json_response({
+                'success': False,
+                'error': 'Username and token required'
+            }, 400)
+        
+        # Get user to retrieve MFA secret
+        user = get_user(username)
+        if not user:
+            return create_json_response({
+                'success': False,
+                'error': 'User not found'
+            }, 404)
+        
+        mfa_secret = user.get('mfa_secret')
+        
+        # Determine which secret to use for verification
+        secret_to_verify = None
+        is_new_setup = False
+        
+        if temp_secret:
+            # New setup - verify against temporary secret
+            secret_to_verify = temp_secret
+            is_new_setup = True
+        elif mfa_secret:
+            # Existing MFA - verify against stored secret
+            secret_to_verify = mfa_secret
+        else:
+            return create_json_response({
+                'success': False,
+                'error': 'MFA not configured'
+            }, 400)
+        
+        # Verify the token
+        if not verify_mfa_token(secret_to_verify, token):
+            return create_json_response({
+                'success': False,
+                'error': 'Invalid MFA token'
+            }, 401)
+        
+        # If this is a new setup, save the secret now that it's verified
+        if is_new_setup:
+            if not save_mfa_secret(username, temp_secret):
+                return create_json_response({
+                    'success': False,
+                    'error': 'Failed to save MFA configuration'
+                }, 500)
+        
+        return create_json_response({
+            'success': True,
+            'message': 'MFA verification successful'
+        })
+        
+    except Exception as e:
+        print(f"MFA verify error: {e}")
+        return create_json_response({
+            'success': False,
+            'error': 'Internal server error'
+        }, 500)
+
+
 def lambda_handler(event, context):
     """Main Lambda handler"""
     print(f"Event: {json.dumps(event)}")
@@ -462,6 +722,10 @@ def lambda_handler(event, context):
         return handle_login(event)
     elif method == 'POST' and path == '/sso':
         return handle_sso(event)
+    elif method == 'POST' and path == '/mfa/setup':
+        return handle_mfa_setup(event)
+    elif method == 'POST' and path == '/mfa/verify':
+        return handle_mfa_verify(event)
     else:
         return create_json_response({
             'error': 'Not found'
