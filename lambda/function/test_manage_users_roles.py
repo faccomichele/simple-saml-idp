@@ -89,7 +89,7 @@ os.environ['USERS_TABLE'] = 'test-users'
 os.environ['ROLES_TABLE'] = 'test-roles'
 
 # Now import the module
-sys.path.insert(0, '/home/runner/work/simple-saml-idp/simple-saml-idp/lambda/function')
+sys.path.insert(0, os.path.dirname(__file__))
 import manage_users_roles
 
 def test_create_user():

@@ -86,7 +86,8 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Generate password hash using bcrypt
         # bcrypt automatically handles salting and uses a secure algorithm
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        # Using rounds=12 for a good balance between security and performance
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
         
         # Derive names from username if not provided
         email = data.get('email', f"{username}@example.com")
@@ -184,7 +185,7 @@ def update_user(data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Handle password update
         if 'password' in data:
-            password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
             update_expressions.append("#ph = :ph")
             expression_attribute_names['#ph'] = 'password_hash'
             expression_attribute_values[':ph'] = password_hash

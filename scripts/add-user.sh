@@ -15,7 +15,8 @@ PASSWORD=$3
 
 # Generate password hash using bcrypt via Python
 # Using printf to safely pass password without shell interpolation
-PASSWORD_HASH=$(printf '%s' "$PASSWORD" | python3 -c "import sys, bcrypt; password = sys.stdin.read(); print(bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'))")
+# Using rounds=12 to match Lambda function configuration
+PASSWORD_HASH=$(printf '%s' "$PASSWORD" | python3 -c "import sys, bcrypt; password = sys.stdin.read(); print(bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8'))")
 
 # Create user item
 # Extract first and last name safely (handle usernames with or without dots)
