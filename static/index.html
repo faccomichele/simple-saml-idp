@@ -286,6 +286,7 @@
             letter-spacing: 0.5em;
             transition: border-color 0.3s;
             font-family: 'Courier New', monospace;
+            -moz-appearance: textfield;
         }
 
         input[type="number"]:focus {
@@ -298,10 +299,6 @@
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
-        }
-
-        input[type="number"] {
-            -moz-appearance: textfield;
         }
     </style>
 </head>
@@ -418,6 +415,7 @@
         
         let currentUsername = '';
         let currentPassword = '';
+        let tempMfaSecret = '';  // Temporary secret for MFA setup
         let selectedRole = null;
 
         // DOM elements
@@ -516,9 +514,10 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Display QR code and secret
+                    // Display QR code and store temporary secret
                     document.getElementById('qrCodeImage').src = `data:image/png;base64,${data.qr_code}`;
-                    document.getElementById('secretCode').textContent = data.secret;
+                    document.getElementById('secretCode').textContent = data.temp_secret;
+                    tempMfaSecret = data.temp_secret;  // Store for verification
                     
                     hideAllScreens();
                     mfaSetup.classList.add('show');
@@ -558,14 +557,17 @@
                     },
                     body: new URLSearchParams({
                         username: currentUsername,
-                        token: token
+                        token: token,
+                        temp_secret: tempMfaSecret  // Send temporary secret for verification
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    // MFA setup complete, now login with MFA
+                    // MFA setup complete, clear password from memory
+                    tempMfaSecret = '';
+                    // Now login with MFA
                     await loginWithMFA(token);
                 } else {
                     showError(data.error || 'Invalid verification code. Please try again.');
@@ -612,6 +614,8 @@
                 const data = await response.json();
 
                 if (data.success && data.roles && data.roles.length > 0) {
+                    // Clear password from memory after successful authentication
+                    currentPassword = '';
                     showRoleSelection(data.roles);
                 } else {
                     showError(data.error || 'Authentication failed');

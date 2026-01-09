@@ -5,15 +5,16 @@ Handles SAML authentication, assertion generation, and AWS Console login
 import json
 import base64
 import os
-import bcrypt
 import hmac
-import pyotp
-import qrcode
 import io
-from lxml import etree
-from signxml import XMLSigner, methods
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlencode
+
+import bcrypt
+import pyotp
+import qrcode
+from lxml import etree
+from signxml import XMLSigner, methods
 import boto3
 from botocore.exceptions import ClientError
 
@@ -611,17 +612,12 @@ def handle_mfa_setup(event):
                 'error': 'Failed to generate QR code'
             }, 500)
         
-        # Save the secret to DynamoDB (will be active after verification)
-        if not save_mfa_secret(username, secret):
-            return create_json_response({
-                'success': False,
-                'error': 'Failed to save MFA secret'
-            }, 500)
-        
+        # Return QR code and secret for display
+        # The secret will be saved only after successful verification
         return create_json_response({
             'success': True,
-            'secret': secret,
-            'qr_code': qr_code
+            'qr_code': qr_code,
+            'temp_secret': secret  # Temporary secret for verification
         })
         
     except Exception as e:
@@ -633,7 +629,7 @@ def handle_mfa_setup(event):
 
 
 def handle_mfa_verify(event):
-    """Handle MFA token verification"""
+    """Handle MFA token verification and save secret if valid"""
     try:
         body = event.get('body', '')
         if event.get('isBase64Encoded'):
@@ -642,6 +638,7 @@ def handle_mfa_verify(event):
         params = parse_qs(body)
         username = params.get('username', [''])[0]
         token = params.get('token', [''])[0]
+        temp_secret = params.get('temp_secret', [''])[0]  # For new setup
         
         if not username or not token:
             return create_json_response({
@@ -658,18 +655,38 @@ def handle_mfa_verify(event):
             }, 404)
         
         mfa_secret = user.get('mfa_secret')
-        if not mfa_secret:
+        
+        # Determine which secret to use for verification
+        secret_to_verify = None
+        is_new_setup = False
+        
+        if temp_secret:
+            # New setup - verify against temporary secret
+            secret_to_verify = temp_secret
+            is_new_setup = True
+        elif mfa_secret:
+            # Existing MFA - verify against stored secret
+            secret_to_verify = mfa_secret
+        else:
             return create_json_response({
                 'success': False,
                 'error': 'MFA not configured'
             }, 400)
         
         # Verify the token
-        if not verify_mfa_token(mfa_secret, token):
+        if not verify_mfa_token(secret_to_verify, token):
             return create_json_response({
                 'success': False,
                 'error': 'Invalid MFA token'
             }, 401)
+        
+        # If this is a new setup, save the secret now that it's verified
+        if is_new_setup:
+            if not save_mfa_secret(username, temp_secret):
+                return create_json_response({
+                    'success': False,
+                    'error': 'Failed to save MFA configuration'
+                }, 500)
         
         return create_json_response({
             'success': True,
