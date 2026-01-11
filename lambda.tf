@@ -1,23 +1,25 @@
 # Lambda Layer for dependencies
 resource "aws_lambda_layer_version" "saml_dependencies" {
-  filename            = data.archive_file.lambda_layer.output_path
+  filename            = "${path.module}/lambda/saml_processor-layer.zip"
   layer_name          = "${local.project_name}-dependencies-${local.environment}"
   compatible_runtimes = ["python3.13"]
-  source_code_hash    = data.archive_file.lambda_layer.output_base64sha256
+  source_code_hash    = filebase64sha256("${path.module}/lambda/saml_processor-layer.zip")
 
   description = "SAML and cryptography dependencies"
 }
 
 # Lambda Function for SAML Processing
 resource "aws_lambda_function" "saml_processor" {
-  filename         = data.archive_file.saml_processor_function.output_path
+  filename         = "${path.module}/lambda/saml_processor.zip"
   function_name    = "${local.project_name}-processor-${local.environment}"
   role             = aws_iam_role.lambda_execution.arn
   handler          = "index.lambda_handler"
-  source_code_hash = data.archive_file.saml_processor_function.output_base64sha256
+  source_code_hash = filebase64sha256("${path.module}/lambda/saml_processor.zip")
   runtime          = "python3.13"
   timeout          = 30
   memory_size      = 512
+
+  layers = [aws_lambda_layer_version.saml_dependencies.arn]
 
   environment {
     variables = {
@@ -48,14 +50,16 @@ resource "aws_lambda_permission" "api_gateway" {
 
 # Lambda Function for User and Role Management
 resource "aws_lambda_function" "manage_users_roles" {
-  filename         = data.archive_file.manage_users_roles_function.output_path
+  filename         = "${path.module}/lambda/manage_users_roles.zip"
   function_name    = "${local.project_name}-manage-users-roles-${local.environment}"
   role             = aws_iam_role.lambda_execution.arn
   handler          = "index.lambda_handler"
-  source_code_hash = data.archive_file.manage_users_roles_function.output_base64sha256
+  source_code_hash = filebase64sha256("${path.module}/lambda/manage_users_roles.zip")
   runtime          = "python3.13"
   timeout          = 30
   memory_size      = 256
+
+  layers = [aws_lambda_layer_version.saml_dependencies.arn]
 
   environment {
     variables = {
