@@ -41,7 +41,7 @@ clean: ## Clean build artifacts
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-build-layer: ## Build Lambda layer with dependencies
+build-layer: ## Build Lambda functions and layer with dependencies
 	./scripts/setup.sh
 
 generate-cert: ## Generate SAML certificates
