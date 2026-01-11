@@ -1,7 +1,7 @@
 # Lambda Layer for dependencies
-resource "aws_lambda_layer_version" "saml_dependencies" {
+resource "aws_lambda_layer_version" "saml_processor_dependencies" {
   filename            = "${path.module}/lambda/saml_processor-layer.zip"
-  layer_name          = "${local.project_name}-dependencies-${local.environment}"
+  layer_name          = "${local.project_name}-sp-dependencies-${local.environment}"
   compatible_runtimes = ["python3.13"]
   source_code_hash    = filebase64sha256("${path.module}/lambda/saml_processor-layer.zip")
 
@@ -19,7 +19,7 @@ resource "aws_lambda_function" "saml_processor" {
   timeout          = 30
   memory_size      = 512
 
-  layers = [aws_lambda_layer_version.saml_dependencies.arn]
+  layers = [aws_lambda_layer_version.saml_processor_dependencies.arn]
 
   environment {
     variables = {
@@ -48,6 +48,16 @@ resource "aws_lambda_permission" "api_gateway" {
   source_arn    = "${aws_apigatewayv2_api.saml.execution_arn}/*/*"
 }
 
+# Lambda Layer for dependencies
+resource "aws_lambda_layer_version" "manage_users_roles_dependencies" {
+  filename            = "${path.module}/lambda/manage_users_roles-layer.zip"
+  layer_name          = "${local.project_name}-mur-dependencies-${local.environment}"
+  compatible_runtimes = ["python3.13"]
+  source_code_hash    = filebase64sha256("${path.module}/lambda/manage_users_roles-layer.zip")
+  description = "SAML and cryptography dependencies"
+}
+
+
 # Lambda Function for User and Role Management
 resource "aws_lambda_function" "manage_users_roles" {
   filename         = "${path.module}/lambda/manage_users_roles.zip"
@@ -59,7 +69,7 @@ resource "aws_lambda_function" "manage_users_roles" {
   timeout          = 30
   memory_size      = 256
 
-  layers = [aws_lambda_layer_version.saml_dependencies.arn]
+  layers = [aws_lambda_layer_version.manage_users_roles_dependencies.arn]
 
   environment {
     variables = {
