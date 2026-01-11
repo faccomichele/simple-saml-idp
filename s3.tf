@@ -51,8 +51,8 @@ resource "aws_s3_bucket_policy" "login_page" {
         Resource = "${aws_s3_bucket.login_page.arn}/*"
       }
     ]
-  }) : jsonencode({
-    Version = "2012-10-17"
+    }) : jsonencode({
+    Version   = "2012-10-17"
     Statement = []
   })
 }

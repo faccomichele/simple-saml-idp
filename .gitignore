@@ -44,6 +44,15 @@ certs/
 
 # Lambda build artifacts
 lambda/layer/python/
+lambda/saml_processor/lambda_function.zip
+lambda/manage_users_roles/lambda_function.zip
+# Ignore all installed packages in lambda function directories
+lambda/saml_processor/*
+!lambda/saml_processor/index.py
+!lambda/saml_processor/requirements.txt
+lambda/manage_users_roles/*
+!lambda/manage_users_roles/index.py
+!lambda/manage_users_roles/requirements.txt
 
 # Python cache
 __pycache__/

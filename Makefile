@@ -33,6 +33,11 @@ format: ## Format Terraform files
 clean: ## Clean build artifacts
 	rm -rf .terraform/
 	rm -rf lambda/layer/python/
+	rm -f lambda/saml_processor/lambda_function.zip
+	rm -f lambda/manage_users_roles/lambda_function.zip
+	# Clean installed packages from lambda directories
+	find lambda/saml_processor -mindepth 1 -maxdepth 1 ! -name 'index.py' ! -name 'requirements.txt' ! -name 'lambda_function.zip' -exec rm -rf {} +
+	find lambda/manage_users_roles -mindepth 1 -maxdepth 1 ! -name 'index.py' ! -name 'requirements.txt' ! -name 'lambda_function.zip' -exec rm -rf {} +
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
