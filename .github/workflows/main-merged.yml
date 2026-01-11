@@ -1,6 +1,6 @@
 # This triggers on all merged PRs into main
 
-name: Main - TF Apply
+name: Main - Deploy
 
 on:
   pull_request:
@@ -14,6 +14,14 @@ permissions:
   contents: read
 
 jobs:
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    name: "[BUILD]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/lambda-build.yml@main
+    with:
+      working-directory: './terraform/lambda'
+    secrets: inherit
+
   dev:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[DEV]"
@@ -23,4 +31,5 @@ jobs:
       region: 'eu-central-1'
       working-directory: '.'
       action: 'apply'
+      download-lambda-artifacts: true
     secrets: inherit

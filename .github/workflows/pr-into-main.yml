@@ -1,6 +1,6 @@
 # This triggers on all PRs to validate the change using Terraform Plan
 
-name: PR - TF Plan
+name: Pull Request - Validate
 
 on:
   pull_request:
@@ -12,7 +12,16 @@ permissions:
   pull-requests: write
   contents: read
 
+
 jobs:
+  build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: "[BUILD]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/lambda-build.yml@main
+    with:
+      working-directory: './terraform/lambda'
+    secrets: inherit
+
   dev:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[DEV]"
@@ -22,4 +31,5 @@ jobs:
       region: 'eu-central-1'
       working-directory: '.'
       action: 'plan'
+      download-lambda-artifacts: true
     secrets: inherit
