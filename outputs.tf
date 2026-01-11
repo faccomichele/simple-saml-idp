@@ -13,7 +13,7 @@ output "cloudfront_distribution_id" {
   value       = var.enable_cloudfront ? aws_cloudfront_distribution.login_page[0].id : null
 }
 
-output "s3_bucket_name" {
+output "website_bucket_name" {
   description = "S3 bucket name for login page"
   value       = aws_s3_bucket.login_page.id
 }
