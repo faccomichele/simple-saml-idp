@@ -33,3 +33,14 @@ jobs:
       action: 'apply'
       download-lambda-artifacts: true
     secrets: inherit
+
+  dev-website:
+    needs: dev
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    name: "[DEV-WEBSITE]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/deploy-website.yml@main
+    with:
+      environment: 'dev'
+      region: 'eu-central-1'
+      working-directory: './website'
+    secrets: inherit

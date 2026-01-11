@@ -27,7 +27,6 @@ Metadata:
           default: Infrastructure References
         Parameters:
           - OIDCProviderStackName
-          - TerraformAccessPolicyAccountID
     ParameterLabels:
       Organization:
         default: GitHub Organization
@@ -37,8 +36,6 @@ Metadata:
         default: Environment
       OIDCProviderStackName:
         default: OIDC Provider Stack Name
-      TerraformAccessPolicyAccountID:
-        default: Terraform Access Policy Account ID
 
 Parameters:
   Organization:
@@ -72,10 +69,6 @@ Parameters:
     Type: String
     Description: Name of the stack that deployed the GitHub OIDC provider
     Default: github-identity-provider
-  
-  TerraformAccessPolicyAccountID:
-    Type: String
-    Description: The account ID for Terraform access managed policy (from terraform-core-aws stack)
 
 # Mapping from lower to upper as CFT does not have intrinsic functions for string case conversion
 Mappings:
@@ -110,7 +103,7 @@ Resources:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
       ManagedPolicyArns:
         # REQUIRED: SSM parameter read policy to retrieve Terraform backend configuration
-        - !Sub 'arn:aws:iam::${TerraformAccessPolicyAccountID}:policy/terraform-core-aws-tf-access-dev'
+        - !Sub 'arn:aws:iam::${AWS::AccountId}:policy/terraform-core-aws-tf-access-dev'
       # Inline policy with required Terraform permissions
       Policies:
         - PolicyName: TerraformDeploymentPolicy
@@ -249,6 +242,8 @@ Resources:
                   - cloudfront:CreateCloudFrontOriginAccessIdentity
                   - cloudfront:GetCloudFrontOriginAccessIdentity
                   - cloudfront:DeleteCloudFrontOriginAccessIdentity
+                  - cloudfront:GetInvalidation
+                  - cloudfront:CreateInvalidation
                 Resource: '*'
 
               # IAM permissions for Lambda execution role
