@@ -19,7 +19,7 @@ jobs:
     name: "[BUILD]"
     uses: faccomichele/utils-n-scripts/.github/workflows/lambda-build.yml@main
     with:
-      working-directory: './terraform/lambda'
+      working-directory: './lambda'
     secrets: inherit
 
   dev:
